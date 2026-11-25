@@ -1,66 +1,128 @@
-# پرسش‌های باز پیش از طراحی نسخه وب
+# Open Questions and Pending Decisions
 
-این پرسش‌ها عمداً محدود به مواردی هستند که پاسخشان روی مدل داده، جریان کار، دسترسی‌ها یا معماری اثر مستقیم دارد.
+## 1. Purpose
 
-## A. پروژه و مشتری
+This document is the authoritative discovery backlog for unresolved product, domain, operational, and technical questions for the MetalCraft web edition.
 
-1. **پاسخ داده شد:** سفارش پروژه‌ای به یک مشتری عضو نسبت داده نمی‌شود؛ مالک سفارش خود پروژه است.
-2. در پیش‌فاکتور و فاکتور سفارش پروژه‌ای، نام چه کسی/چه شرکتی باید درج شود: نام پروژه یا نام مشتریان عضو هم باید نمایش داده شود؟
-3. یک مشتری می‌تواند هم‌زمان عضو چند پروژه باشد؟ (ساختار فعلی اجازه می‌دهد.)
-4. **پاسخ داده شد:** هر پروژه در هر زمان فقط یک سفارش فعال/جاری دارد.
-5. **پاسخ داده شد:** اگر سفارش پروژه لغو شود، امکان ثبت سفارش جدید برای همان پروژه وجود دارد.
-6. آیا پس از تکمیل سفارش پروژه نیز می‌توان سفارش جدیدی برای همان پروژه ثبت کرد؟ این مورد فعلاً باز می‌ماند و در صورت نیاز بعداً تصمیم‌گیری می‌شود.
-7. آیا پروژه پس از ایجاد می‌تواند غیرفعال یا بسته شود؟ فیلد `IsActive` در دیتابیس Debug هست، ولی رفتار UI/Repository آن در سورس فعلی روشن نیست.
+An unanswered question must remain open. AI agents and developers must not silently convert assumptions, legacy implementation details, or technical preferences into requirements or implementation decisions.
 
-## B. سفارش و وضعیت‌ها
+This backlog records questions and their current status. It does not itself approve answers. Approved decisions must be recorded through the project decision protocol.
 
-5. وضعیت `PendingPayment` دقیقاً چه زمانی باید استفاده شود؟
-6. آیا سفارش با پیش‌پرداخت صفر مجاز است؟
-7. آیا سفارش تا قبل از پرداخت/تأیید مالی می‌تواند وارد خط تولید شود؟
-8. آیا سفارش خدماتی باید از ایستگاه‌های تولید عبور کند؟
-9. پس از آخرین ایستگاه، سفارش خودکار Completed می‌شود؛ آیا این به معنی تحویل به مشتری هم هست یا فقط پایان تولید؟
-10. آیا سفارش پس از شروع تولید قابل ویرایش است؟ کدام فیلدها؟
-11. شماره پیش‌فاکتور و شماره فاکتور دستی هستند یا باید خودکار تولید شوند؟
-12. آیا امکان چند فاکتور/چند مرحله صورتحساب برای یک سفارش وجود دارد؟
+## 2. Domain and Workflow Questions
 
-## C. مالی
+| ID | Question | Why it matters | Status |
+|---|---|---|---|
+| OQ-001 | Can a project receive a new order after its previous order is `Completed`? | Defines project order lifecycle and recurrence rules | Open |
+| OQ-002 | Which exact order statuses count as active for the intended limit of at most one active order per project? | Required to define and enforce the project-order constraint | Open |
+| OQ-003 | Can a project have an order in a payment-pending, paused, draft, or other non-production state while another order is created? | Clarifies how the active-order rule applies across lifecycle states | Open |
+| OQ-004 | Can customers be added to or removed from a project after orders have been created? | Affects membership history, existing orders, and access to project work | Open |
+| OQ-005 | Can one customer belong to multiple projects at the same time? | Affects membership constraints and workflows | Open |
+| OQ-006 | What happens to a project when all member customers are removed? | Defines project lifecycle and whether an empty project can remain usable | Open |
+| OQ-007 | Can customers or projects be deleted, or should they only be archived/deactivated? | Affects referential integrity, historical records, and auditability | Open |
+| OQ-008 | What are the complete order types, and how do their workflows differ? | Affects order behavior, validation, and UI | Open |
+| OQ-009 | What are the valid order status transitions, including who or what may trigger each transition? | Required for reliable lifecycle implementation and authorization | Open |
+| OQ-010 | What exactly happens when an order is cancelled? | May affect payments, production, materials, inventory, and documents | Open |
+| OQ-011 | Can an order be reopened after completion or cancellation? If so, under what conditions? | Affects lifecycle rules and audit history | Open |
+| OQ-045 | Can a project-owned order be created when the project has no member customers? | Defines project-order eligibility and validation | Open |
+| OQ-046 | When project membership changes, should existing project orders retain a historical snapshot of the participating customers, or reflect the current membership? | Determines how historical project work and documents are interpreted | Open |
 
-13. واحد پول نهایی ریال است یا تومان؟ UI در بعضی نقاط «تومان» را نمایش می‌دهد؛ این باید یک قاعده سراسری شود.
-14. ترتیب محاسبه تخفیف و مالیات چیست؟ مالیات روی مبلغ قبل یا بعد از تخفیف محاسبه می‌شود؟
-15. آیا چند پرداخت برای یک سفارش مجاز است؟ آیا برگشت وجه/اصلاح پرداخت لازم است؟
-16. آیا چک باید وضعیت سررسید/وصول داشته باشد یا فقط روش پرداخت ثبت می‌شود؟
-17. آیا تغییر مبلغ قابل پرداخت بعد از دریافت وجه باید ثبت تاریخچه و علت داشته باشد؟
+## 3. Commercial and Payment Questions
 
-## D. تولید
+| ID | Question | Why it matters | Status |
+|---|---|---|---|
+| OQ-012 | What is the exact order pricing model, including quantity, unit price, line totals, and order totals? | Defines commercial calculations and data requirements | Open |
+| OQ-013 | Are discounts applied per item, per order, or both? | Defines calculation rules and presentation | Open |
+| OQ-014 | How is tax calculated and configured? | Defines financial calculations, rounding, and historical accuracy | Open |
+| OQ-015 | What is the prepayment/deposit workflow, and how does it affect order processing? | Clarifies payment expectations and lifecycle dependencies | Open |
+| OQ-016 | Can an order have multiple partial payments? | Determines payment cardinality and balance calculations | Open |
+| OQ-017 | Are refunds, payment reversals, and multiple payment methods required? | Defines accounting behavior and transaction history | Open |
+| OQ-018 | Can payment status change independently of production status? | Determines whether payment and production lifecycle states must be modeled separately | Open |
+| OQ-019 | How are proforma and invoice numbers generated, and must they be unique, sequential, or legally sequential? | Affects numbering rules, concurrency, and document integrity | Open |
+| OQ-047 | Are payments associated with an order, an invoice, or another financial record? Can one payment cover multiple records? | Determines payment relationships and allocation behavior | Open |
 
-18. آیا مسیر تولید برای هر سفارش مستقل انتخاب می‌شود یا الگوی مسیر آماده هم لازم است؟
-19. آیا امکان عبور از ایستگاه، توقف، برگشت چند مرحله، یا دوباره‌کاری وجود دارد؟
-20. آیا هر ایستگاه اپراتور مسئول دارد؟ آیا نام اپراتور و زمان شروع/پایان باید ثبت شود؟
-21. آیا زمان‌بندی، ظرفیت دستگاه، برنامه روزانه یا اولویت سفارش لازم است؟
-22. هنگام تغییر نام یا حذف ایستگاه، تاریخچه سفارش‌های قدیمی باید دقیقاً چه چیزی را نشان دهد؟
+## 4. Production Questions
 
-## E. کاربران و امنیت
+| ID | Question | Why it matters | Status |
+|---|---|---|---|
+| OQ-020 | Are production routes fixed, configurable, or selected per order? | Defines routing model and configuration requirements | Open |
+| OQ-021 | Can an order skip, repeat, or return to a production station? | Defines production state transitions and traceability | Open |
+| OQ-022 | Who can update production progress, and which updates require authorization? | Affects authorization and operational accountability | Open |
+| OQ-023 | Is production progress tracked by order, item, quantity, or batch? | Affects data model, workflow, and reporting | Open |
+| OQ-024 | What should happen when a route has no stations? | Existing source behavior may complete an order immediately; intended business behavior is not confirmed | Open |
+| OQ-025 | Are materials, waste, and production performance required in the web edition? | Determines whether legacy manufacturing data and workflows must be included or expanded | Open |
 
-23. چه نقش‌هایی وجود دارند؟ نمونه‌های احتمالی: مدیر، فروش، مالی، اپراتور تولید، مشاهده‌گر. این‌ها صرفاً مثال‌اند و هنوز در سورس تعریف نشده‌اند.
-24. هر نقش دقیقاً چه عملیاتی را می‌تواند انجام دهد؟
-25. آیا کاربر باید بتواند فقط سفارش‌های مربوط به واحد/بخش خودش را ببیند؟
-26. آیا ثبت ورود، خروج، تغییرات مهم و عملیات مالی در Audit Log لازم است؟
-27. آیا دسترسی از بیرون شبکه شرکت نیاز است یا فقط LAN؟
+## 5. Users, Access, and Audit Questions
 
-## F. استقرار و فناوری
+| ID | Question | Why it matters | Status |
+|---|---|---|---|
+| OQ-026 | What user roles are required? | No clear legacy role/permission model was identified | Open |
+| OQ-027 | Which actions require fine-grained permissions, and at what level should access be restricted? | Defines authorization boundaries | Open |
+| OQ-028 | Is an audit trail required for changes to customers, projects, orders, payments, and production? Which events and details must be retained? | Affects traceability, accountability, and storage requirements | Open |
+| OQ-029 | Are users internal to one organization, or is multi-tenancy required? | Affects security and data isolation | Open |
+| OQ-030 | Are password reset, account lockout, session expiry, and multi-factor authentication (MFA) required? | Defines authentication and account-security requirements | Open |
 
-28. برنامه وب روی یک Windows Server داخل شرکت نصب می‌شود یا Cloud/VPS؟
-29. چند کاربر هم‌زمان و چند شعبه/محل کاری وجود دارد؟
-30. آیا کاربران از موبایل و تبلت هم استفاده می‌کنند؟
-31. آیا باید دیتابیس فعلی SQLite به نسخه وب منتقل شود؟ کدام فایل دیتابیس مرجع است: Debug یا Release یا فایل عملیاتی جداگانه؟
-32. آیا نسخه WinForms در زمان توسعه وب همچنان فعال می‌ماند و هر دو برنامه به یک داده مشترک نیاز دارند؟
+## 6. Documents, Reporting, and Operations
 
-## G. اسناد و چاپ
+| ID | Question | Why it matters | Status |
+|---|---|---|---|
+| OQ-031 | Which documents must the web edition generate (for example, proforma, invoice, work order, and delivery note)? | Defines document templates and output scope | Open |
+| OQ-032 | Must documents be printable in Persian with right-to-left layout? Are there required fonts, paper sizes, or print formats? | Affects typography, layout, PDF generation, and printing | Open |
+| OQ-033 | Are file attachments required? If so, which business records can own them and what file types or limits apply? | Affects storage, validation, and access control | Open |
+| OQ-034 | Which dashboards and reports are essential, and which data filters are required? | Defines reporting scope and query requirements | Open |
+| OQ-035 | Are notifications required? If so, which events, recipients, and delivery channels are needed? | Affects background processing and integrations | Open |
+| OQ-036 | What backup frequency, retention period, restore procedure, and operational ownership are required? | Defines operational architecture and recovery expectations | Open |
 
-33. قالب فاکتور فعلی باید بدون تغییر حفظ شود یا بازطراحی مجاز است؟
-34. آیا لوگو، مهر، امضا، شرایط فروش، اطلاعات بانکی و چند نسخه چاپی لازم است؟
-35. آیا خروجی PDF و ارسال فایل برای مشتری لازم است؟
-36. آیا فایل یا تصویر باید به مشتری/پروژه/سفارش پیوست شود؟
+## 7. Technical and Deployment Decisions
 
-## ترتیب پیشنهادی پاسخ
-ابتدا پرسش‌های 1، 2، 5، 6، 7، 13، 23، 28، 29، 31 و 32 پاسخ داده شوند؛ این‌ها بیشترین اثر را بر طراحی نسخه وب دارند.
+| ID | Question | Why it matters | Status |
+|---|---|---|---|
+| OQ-037 | Which database engine will the web edition use? | Core persistence and deployment decision | Open |
+| OQ-038 | Where will the application be hosted (LAN server, cloud, or both)? | Affects networking, security, and operations | Open |
+| OQ-039 | What are the expected concurrent users, peak workload, and data volume? | Informs capacity and concurrency design | Open |
+| OQ-040 | Is migration of legacy SQLite data required? If so, which database file or source is authoritative? | The inspected Debug and Release schemas differ | Open |
+| OQ-041 | What is the canonical source of schema definitions and migrations for the web edition? | Legacy initialization and migration process is unclear | Open |
+| OQ-042 | Which browsers, screen sizes, and devices must be supported? | Defines UI compatibility and testing scope | Open |
+| OQ-043 | Are external integrations required? If so, which systems and data flows are involved? | Affects API, security, and operational design | Open |
+| OQ-044 | What environments and deployment process are required, including configuration, release, rollback, and updates? | Defines delivery and operational strategy | Open |
+| OQ-048 | What measurable service and recovery targets apply, including availability, response time, peak throughput, Recovery Time Objective (RTO), and Recovery Point Objective (RPO)? | Provides measurable non-functional requirements for architecture and QA | Open |
+
+## 8. Legacy Findings Requiring Validation
+
+The following are observations from the inspected legacy source and database files. They are not automatically approved web-edition requirements or decisions. Validate them with the Product Owner or against actual operational usage before relying on them.
+
+- The inspected Debug and Release SQLite files have different schemas despite both reporting `SchemaVersion = 1`.
+- The Debug database appears more feature-complete, but it is not confirmed as the production source of truth.
+- The order creation flow sets `InProduction`, while a self-test expects `PendingPayment`.
+- The order dialog passes null for payment when saving.
+- An order can become `Completed` immediately when no production route exists.
+- The project `IsActive` database field is not consistently represented in the inspected model/repository.
+- Project deletion is blocked by the legacy repository if any order exists.
+- No persistence-level rule for one active order per project was identified.
+- The legacy login implementation uses a password-storage approach that must not be copied into the web edition without a new security design.
+
+These findings should be linked to the relevant discovery documents or source evidence when they are investigated. A legacy behavior must not be treated as the intended business rule merely because it is implemented.
+
+## 9. Decision Protocol
+
+For each question:
+
+1. The Product Owner records the business answer, explicitly marks the question out of scope, or defers it with a reason.
+2. The System Architect evaluates the approved answer's data, security, workflow, and operational impact.
+3. The approved decision is recorded in `DECISION_LOG.md` and in any relevant task artifacts.
+4. The Developer implements only approved behavior and documents any explicitly approved temporary assumption.
+5. QA verifies the accepted rule and relevant edge cases.
+6. The Product Owner reviews the result and records acceptance before the task is considered complete.
+
+Until a question is resolved, implementation must either avoid depending on it or use an explicitly documented temporary assumption approved for that task. A temporary assumption is not a permanent product decision.
+
+## 10. Status Vocabulary
+
+Use these statuses consistently:
+
+- **Open** — no approved answer has been recorded.
+- **Answered** — the Product Owner has provided an answer, but the decision may still require architectural assessment or formal recording.
+- **Approved** — the decision has been accepted by the Product Owner and recorded in `DECISION_LOG.md`.
+- **Deferred** — the decision is intentionally postponed; include the reason and the condition or milestone for revisiting it.
+- **Out of Scope** — the Product Owner has explicitly excluded the capability or question from the web edition.
+
+Do not change a question's status based only on an AI recommendation, developer assumption, or legacy implementation detail. Preserve question IDs when editing existing entries. Assign new IDs only to genuinely new questions, and update related documents when a decision changes their content.

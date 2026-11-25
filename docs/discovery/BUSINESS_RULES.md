@@ -1,75 +1,121 @@
-# قواعد کسب‌وکار استخراج‌شده از سورس
+# Business Rules
 
-در این سند فقط قواعدی ثبت شده‌اند که در کد یا Constraint دیتابیس قابل مشاهده‌اند. تفسیر تجاری و قواعد پیشنهادی جداگانه مشخص شده‌اند.
+## 1. Purpose
 
-## 1. مشتری و پروژه
+This document records business rules that are explicitly confirmed for MetalCraft and separates them from behaviors merely observed in the legacy WinForms implementation.
 
-1. کد مشتری در زمان درج از مقدار `MAX(Customers.Id)+1` ساخته می‌شود.
-2. حذف مشتری در صورتی که سفارش مستقیم داشته باشد، از طریق Repository مسدود می‌شود.
-3. هر پروژه می‌تواند چند مشتری عضو داشته باشد.
-4. هنگام ویرایش پروژه، فهرست عضویت مشتریان با حذف ارتباط‌های قبلی و درج فهرست جدید جایگزین می‌شود.
-5. حذف پروژه دارای سفارش در Repository مسدود می‌شود.
-6. ایجاد مشتری از داخل فرم سفارش، در صورت انتخاب پروژه، مشتری جدید را به همان پروژه اضافه می‌کند.
+Each rule has an identifier and a status. Only rules marked **Confirmed** should be treated as binding requirements for implementation.
 
-## 2. مالک سفارش
+## 2. Confirmed Rules
 
-1. هر سفارش باید دقیقاً یکی از این دو حالت را داشته باشد:
-   - مشتری مستقیم (`CustomerId` پر، `ProjectId` خالی)
-   - پروژه (`ProjectId` پر، `CustomerId` خالی)
-2. این قاعده هم در `OrderRepository.Create` و هم در CHECK constraint جدول Orders دیده می‌شود.
-3. عضویت مشتری در پروژه به‌تنهایی تعیین‌کننده مالک سفارش نیست.
-4. **قاعده تأییدشده توسط مالک محصول: هر پروژه در هر زمان فقط یک سفارش فعال/جاری دارد؛ اگر سفارش قبلی لغو شود، ثبت سفارش جدید برای همان پروژه مجاز است.** سفارش متعلق به کل پروژه است و پروژه به‌عنوان یک واحد وارد خط تولید می‌شود؛ سفارش پروژه‌ای بین مشتریان عضو تقسیم نمی‌شود.
-5. اگر سفارش پروژه لغو شود، امکان ثبت سفارش جدید برای همان پروژه وجود دارد. سفارش لغوشده باید از سفارش جاری تفکیک شود؛ نگهداری سابقه آن در تاریخچه یک نیاز طراحی مهم است.
+### BR-001 — Customer-Owned Orders
 
-## 3. اقلام و مبالغ
+A customer may own an order directly.
 
-1. مقدار Quantity در دیتابیس باید بزرگ‌تر از صفر باشد.
-2. UnitPrice باید منفی نباشد.
-3. سفارش فیلدهای مبلغ جزء، تخفیف، مالیات، مبلغ قابل پرداخت، پیش‌پرداخت و مبلغ پرداخت‌شده را نگهداری می‌کند.
-4. فرمول دقیق گرد کردن مبالغ و ترتیب اعمال تخفیف/مالیات باید از کد کامل فرم و تصمیم مالک محصول نهایی شود؛ این سند فرمول مالی جدیدی فرض نمی‌کند.
+**Status:** Confirmed
 
-## 4. پرداخت
+### BR-002 — Project Membership
 
-1. Payment به یک Order وابسته است.
-2. مبلغ پرداخت باید بزرگ‌تر از صفر باشد.
-3. روش‌های پرداختی که در UI فارسی‌سازی شده‌اند: کارتخوان، انتقال بانکی، چک و نقدی.
-4. `PaidAmount` در سفارش با افزودن پرداخت افزایش می‌یابد.
-5. ثبت پرداخت و افزایش PaidAmount در تراکنش انجام می‌شود.
+A project may contain multiple customers.
 
-## 5. مسیر تولید
+**Status:** Confirmed
 
-1. مسیر سفارش مجموعه‌ای مرتب از ایستگاه‌ها با Sequence است.
-2. نام ایستگاه هنگام ایجاد مرحله در `OrderStations.StationName` ذخیره می‌شود.
-3. صف ایستگاه فقط سفارش‌های `InProduction` با `CurrentStationId` همان ایستگاه را نمایش می‌دهد.
-4. تکمیل مرحله، اولین مرحله تکمیل‌نشده بعدی را به‌عنوان ایستگاه جاری انتخاب می‌کند.
-5. اگر مرحله تکمیل‌نشده‌ای باقی نماند، سفارش `Completed` می‌شود و `CurrentStationId` تهی می‌شود.
-6. بازگشت به مرحله قبل، آخرین مرحله قبلی را از حالت انجام‌شده خارج کرده و ایستگاه جاری را به آن تغییر می‌دهد.
-7. حذف ایستگاه در صورت وجود مرحله تکمیل‌نشده در سفارش فعال، مسدود می‌شود.
-8. تغییر نام ایستگاه، نام Snapshot مراحل انجام‌نشده را نیز به‌روزرسانی می‌کند.
+### BR-003 — Project-Owned Orders
 
-## 6. وضعیت‌های سفارش
+An order may be owned by a project.
 
-مقادیر Enum:
-- `PendingPayment`
-- `InProduction`
-- `Completed`
-- `Cancelled`
+**Status:** Confirmed
 
-در Create جاری، وضعیت سفارش جدید به‌صورت `InProduction` درج می‌شود؛ بنابراین معنای عملی `PendingPayment` و زمان ورود به تولید با UI و رفتار مورد انتظار نیازمند تأیید است.
+### BR-004 — Project Order Ownership
 
-## 7. حذف و لغو
+A project-owned order belongs to the project as a whole. It does not belong to an individual member customer.
 
-- لغو سفارش، Status را `Cancelled` و CurrentStationId را NULL می‌کند.
-- حذف سفارش نیز وجود دارد و با توجه به Cascade، اقلام، مراحل و پرداخت‌های وابسته حذف می‌شوند.
-- سیاست نگهداری اسناد مالی و سابقه تغییرات در سورس به‌صورت کامل مشخص نشده است.
+**Status:** Confirmed
 
-## 8. موارد نیازمند تصمیم محصول
-- آیا پس از تکمیل سفارش پروژه نیز می‌توان سفارش جدیدی برای همان پروژه ثبت کرد، یا فقط پس از لغو امکان سفارش مجدد وجود دارد؟
-- آیا سفارش بدون پرداخت می‌تواند وارد تولید شود؟
-- آیا پیش‌پرداخت اجباری است یا اختیاری؟
-- آیا سفارش خدماتی هم مسیر تولید دارد؟
-- آیا پس از تکمیل تولید، تسویه باید انجام شود یا سفارش بلافاصله Completed تلقی می‌شود؟
-- آیا بازگشت به ایستگاه قبلی باید یادداشت و تاریخچه قبلی را حفظ کند؟
-- آیا ویرایش سفارش بعد از شروع تولید مجاز است؟
-- آیا حذف سفارش باید در نسخه وب حذف نرم (Soft Delete) شود؟
-- در سفارش پروژه‌ای، مخاطب/مشتری منتخب فاکتور چه کسی است؟
+### BR-005 — Exclusive Order Ownership
+
+Every order must have exactly one owner:
+- One customer, or
+- One project.
+
+An order cannot belong to both a customer and a project, and cannot have no owner.
+
+**Status:** Confirmed
+
+### BR-006 — Historical Project Orders
+
+A project may have multiple historical orders.
+
+**Status:** Confirmed
+
+### BR-007 — One Active Project Order
+
+A project is intended to have no more than one active order at any given time. Cancelled orders are excluded from this intended limit.
+
+**Status:** Confirmed at the business-intent level; exact status predicate is open.
+
+## 3. Open Rules — Do Not Infer
+
+### BR-008 — New Order After Completion
+
+It is not yet decided whether a new order may be created for a project after its previous order has reached `Completed`.
+
+**Status:** Open
+
+### BR-009 — Definition of Active
+
+The exact set of order statuses that count as active has not been approved.
+
+**Status:** Open
+
+### BR-010 — Cancelled Order Semantics
+
+The effects of cancellation on payments, production records, inventory/materials, numbering, and audit history have not been fully specified.
+
+**Status:** Open
+
+### BR-011 — Project Membership Changes
+
+Rules for adding/removing customers after orders exist are not defined.
+
+**Status:** Open
+
+### BR-012 — Customer and Project Deletion
+
+The legacy repository blocks deletion of projects that have orders. The target web policy for deleting, archiving, or deactivating customers and projects requires approval.
+
+**Status:** Open for the web edition
+
+## 4. Legacy Behaviors That Are Not Approved Business Rules
+
+The following behaviors were observed in the WinForms implementation but must not be treated as approved requirements without product-owner confirmation:
+
+- New orders are currently initialized as `InProduction`.
+- The first production station is initialized during order creation.
+- An order may be set to `Completed` immediately if no production route exists.
+- Payment-related status members and confirmation logic exist, while the order creation flow and self-test expectations disagree.
+- The order dialog passes a null payment value when saving.
+- Project deletion is blocked if any order exists.
+- A project `IsActive` database field exists but is not consistently represented in the inspected project model/repository.
+
+## 5. Rule Enforcement Expectations
+
+For each confirmed rule, the implementation design should identify:
+- Domain-level validation.
+- Application/use-case validation.
+- Database constraints or transaction/concurrency protections where appropriate.
+- User-facing validation behavior.
+- Automated tests covering valid and invalid cases.
+
+For BR-005, persistence must prevent invalid owner combinations even if requests bypass the UI. The ownership invariant must also remain valid during concurrent or partially completed operations.
+
+For BR-007, implementation must wait until BR-008 and BR-009 are clarified. A database uniqueness constraint should not be introduced using an unapproved interpretation of "active".
+
+## 6. Change Control
+
+Changes to confirmed rules must be:
+1. Proposed by the Product Owner.
+2. Assessed by the System Architect for data and workflow impact.
+3. Implemented only after approval.
+4. Covered by QA tests.
+5. Recorded in the project's decision log and relevant task artifacts.

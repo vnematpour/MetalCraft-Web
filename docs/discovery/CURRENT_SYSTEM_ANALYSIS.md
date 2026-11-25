@@ -1,120 +1,113 @@
-# تحلیل سیستم فعلی MetalCraftPro
+# Current System Analysis
 
-## 1. محدوده بررسی
+## 1. Purpose and Scope
 
-منبع بررسی، سورس C# و فایل‌های SQLite موجود در آرشیو `MetalCraftPro-Source-NoComments-2026-10-30.rar` است. فایل‌های اصلی شامل پروژه WinForms، Repositoryها، مدل‌ها، فرم‌ها، صفحات، فایل SQL و دو دیتابیس خروجی Debug و Release هستند.
+This document describes the existing MetalCraft desktop application based on the inspected WinForms source archive and its included SQLite databases. It is a baseline for discovery and planning of the web edition.
 
-این بررسی تحلیل ایستا است؛ برنامه روی ویندوز اجرا و سناریوهای عملیاتی آن به‌صورت دستی تست نشده‌اند.
+It does **not** define the target web architecture. Existing implementation details must not automatically become requirements for the new system.
 
-## 2. مشخصات فنی مشاهده‌شده
+## 2. Existing Application
 
-| موضوع | وضعیت مشاهده‌شده |
+| Area | Observed implementation |
 |---|---|
-| نوع برنامه | Windows Forms |
-| فریم‌ورک | `net10.0-windows` |
-| نسخه اسمبلی | `2.0.0` |
-| زبان | C#، `LangVersion=latest` |
-| پایگاه داده | SQLite |
-| دسترسی داده | `Microsoft.Data.Sqlite` نسخه `10.0.14` |
-| معماری کد | یک پروژه، مدل‌ها + Repositoryهای static + UI |
-| رابط کاربری | فارسی و راست‌به‌چپ |
-| فونت | فونت‌های IRANSansX به‌صورت Embedded Resource |
-| شناسه اجرای برنامه | تک‌نمونه‌ای با Mutex |
-| تنظیمات | جدول Settings و تنظیم Theme |
-| پشتیبان‌گیری | `VACUUM INTO` |
-| احراز هویت | فرم Login و UserRepository |
+| Application type | Windows desktop application |
+| UI framework | Windows Forms |
+| Target framework | .NET 10 (`net10.0-windows`) |
+| Runtime identifier | `win-x64` |
+| Database | SQLite |
+| Data access | `Microsoft.Data.Sqlite` 10.0.14 |
+| Application version | 2.0.0 |
+| Main project | `src/MetalCraftPro/MetalCraftPro.csproj` |
+| Solution | `MetalCraftPro.sln` |
 
-در پروژه فعلی لایه مستقل Domain/Application/Infrastructure یا API وجود ندارد. عملیات پایگاه داده عمدتاً از طریق کلاس‌های static در پوشه `Data` انجام می‌شوند.
+The source is organized into areas including `Core`, `Data`, `Models`, `UI`, and `DevTools`. The UI contains pages, forms, and controls. Data access is implemented through static repository classes and direct SQL rather than Entity Framework Core or a generic Unit of Work.
 
-## 3. نقشه صفحات اصلی
+## 3. Existing Functional Areas
 
-منوی اصلی در `MainForm` این صفحات را ثبت می‌کند:
+The inspected source indicates the following functional areas:
 
-1. داشبورد (`DashboardPage`)
-2. مشتریان (`CustomersPage`)
-3. سفارشات (`OrdersPage`)
-4. پروژه‌ها (`ProjectsPage`)
-5. خط تولید (`ProductionPage`)
-6. کاربران (`UsersPage`)
-7. پایگاه داده (`DatabasePage`)
+- Dashboard
+- Customer management
+- Project management and customer membership
+- Order management, including production and service order types
+- Order items
+- Discounts, tax, and prepayment-related fields
+- Payments and payment-related status handling
+- Production stations and order production routes
+- User records and login
+- Theme and UI formatting
+- Invoice/proforma printing
+- Database backup and restore utilities
+- SQL/database diagnostic tools
+- Developer self-tests and snapshot-related utilities
 
-همچنین فرم‌ها و Dialogهای زیر وجود دارند:
-- ورود به سیستم
-- ثبت/ویرایش مشتری
-- ثبت/ویرایش پروژه و انتخاب اعضای پروژه
-- ثبت سفارش
-- جزئیات سفارش و عملیات مالی
-- ثبت پرداخت
-- مدیریت ایستگاه
-- مدیریت کاربر
-- پیش‌نمایش و چاپ فاکتور
+This is a source-derived inventory, not a statement that every area is complete, actively used, or required in the web edition.
 
-## 4. جریان‌های کاری قابل مشاهده
+## 4. Database and Initialization Findings
 
-### 4.1 ورود
-کاربر نام کاربری و رمز را وارد می‌کند. `UserRepository.Authenticate` هش ذخیره‌شده را با هش رمز واردشده و Salt مقایسه می‌کند. پس از ورود، `MainForm` با اطلاعات کاربر ساخته می‌شود.
+Two SQLite database files were present in the inspected archive:
 
-### 4.2 مشتری
-مشتری دارای کد، نام، تلفن اصلی، تلفن دوم، شرکت، شناسه ملی، نشانی، توضیحات و تاریخ ایجاد است. جست‌وجو بر اساس نام، تلفن‌ها، شرکت، کد و شناسه ملی انجام می‌شود. کد مشتری در زمان درج از `MAX(Id)+1` ساخته می‌شود.
+- Debug database: `src/MetalCraftPro/bin/Debug/net10.0-windows/win-x64/Data/MetalCraft.db`
+- Release database: `src/MetalCraftPro/bin/Release/net10.0-windows/win-x64/Data/MetalCraft.db`
 
-### 4.3 پروژه
-پروژه دارای کد، نام، توضیحات و اعضای مشتری است. ارتباط پروژه و مشتری از طریق جدول واسط `ProjectCustomers` برقرار شده است. در فرم پروژه امکان انتخاب چند مشتری وجود دارد.
+Both databases passed SQLite integrity checks. Their schemas were not identical even though both reported `SchemaVersion = 1`.
 
-### 4.4 سفارش
-در فرم سفارش، کاربر می‌تواند پروژه و مشتری را انتخاب کند، نوع سفارش را تولیدی یا خدماتی تعیین کند، توضیحات و شماره پیش‌فاکتور/فاکتور وارد کند، اقلام را ثبت کند و ایستگاه‌های مسیر را انتخاب کند. محاسبات تخفیف، مالیات، مبلغ قابل پرداخت و پیش‌پرداخت در فرم انجام می‌شود.
+The Debug database contained structures not present in the Release database, including:
 
-کد `OrderRepository.Create` بررسی می‌کند که سفارش دقیقاً یکی از دو مالک را داشته باشد: مشتری مستقیم یا پروژه. این قاعده در دیتابیس نیز با CHECK constraint پشتیبانی شده است.
+- `Projects`
+- `ProjectCustomers`
+- `Orders.ProjectId`
+- `Customers.Phone2`
+- `OrderItems.Color`
+- `OrderItems.Brand`
+- `Orders.ProformaNumber`
+- `Orders.InvoiceNumber`
 
-### 4.5 پرداخت و تولید
-در جزئیات سفارش، عملیات افزودن پرداخت و تغییر مبلغ قابل پرداخت وجود دارد. در Repository، ثبت پرداخت، تأیید پرداخت، تکمیل ایستگاه، بازگشت به ایستگاه قبلی، لغو و حذف سفارش پیاده‌سازی شده‌اند.
+The Debug database is therefore the more feature-complete schema among the two files inspected. This does not prove that it is the authoritative production database. The intended canonical schema and migration history still need confirmation.
 
-### 4.6 خط تولید
-ایستگاه‌ها ترتیب دارند. هر سفارش می‌تواند مسیر مشخصی از ایستگاه‌ها داشته باشد. صف هر ایستگاه از سفارش‌هایی ساخته می‌شود که وضعیت `InProduction` و ایستگاه فعلی آن‌ها همان ایستگاه انتخابی است. اپراتور می‌تواند مرحله را تکمیل کند و سفارش به اولین مرحله تکمیل‌نشده بعدی منتقل می‌شود. عملیات بازگشت به مرحله قبل نیز وجود دارد.
+The database initialization code uses an application-base `Data/MetalCraft.db` path by default, supports a `METALCRAFT_DB` environment variable, and has a Local Application Data fallback when the default location is not writable.
 
-### 4.7 داشبورد
-داشبورد تعداد سفارش‌های تولیدی، خدماتی، در حال تولید و تکمیل‌شده را نمایش می‌دهد؛ کارت‌های ایستگاه‌ها و آخرین سفارش‌ها نیز در آن دیده می‌شوند. بخشی از نمایش شاخص‌های مالی در کد کامنت شده است.
+The inspected `Schema.sql` did not appear to be a complete schema-definition script containing all table/index/view DDL. The initialization path executes the embedded SQL text. No reliable, ordered schema-migration mechanism was identified in the inspected source. The build script also does not explicitly establish a complete database packaging and migration process. A clean-install bootstrap and upgrade path therefore require further verification.
 
-### 4.8 مدیریت پایگاه داده
-صفحه پایگاه داده امکاناتی برای مشاهده جدول‌ها، اجرای SQL، مشاهده لاگ Queryها، تهیه پشتیبان و بازیابی پشتیبان دارد. این صفحه از نظر امنیتی در نسخه وب باید با سطح دسترسی بسیار محدود طراحی شود.
+The restore-validation path also needs review: the inspected validation did not establish that all structures required by the more feature-complete Debug schema, including `Projects` and `ProjectCustomers`, are mandatory for a restored database.
 
-## 5. نکات مهم و ریسک‌های کشف‌شده
+## 5. Important Existing Implementation Behaviors
 
-### 5.1 نبود مرزبندی نقش‌ها و مجوزها
-در مدل فعلی User فقط اطلاعات حساب را دارد و در سورس بررسی نقش/Permission برای کاربران دیده نمی‌شود. داشتن صفحه مدیریت کاربران به معنی وجود سیستم نقش‌ها نیست.
+- A desktop named mutex is used to prevent multiple ordinary application instances. This is not a web multi-user concurrency strategy.
+- Repositories are static classes using direct SQL.
+- The project/customer relationship is many-to-many in the inspected Debug database.
+- The order data model supports customer and project ownership, and the inspected Debug database includes a constraint enforcing exclusive ownership.
+- Project deletion is blocked when the project has orders.
+- The project model/repository does not appear to make meaningful use of the `Projects.IsActive` database field.
+- No database-level or repository-level guarantee for one active order per project was found.
+- Order creation currently sets the initial status to `InProduction` and initializes the first production station. If no route is available, the order can become `Completed` immediately.
+- Payment-related status members and confirmation logic exist, but the inspected order creation flow and developer self-test expectations are inconsistent: the creation flow uses `InProduction`, while a self-test expects `PendingPayment`.
+- The inspected order dialog passes a null payment value when saving.
+- A SQL console is present in developer/database tools.
+- The query logger retains SQL and parameter values in memory.
 
-### 5.2 الگوریتم هش رمز
-`UserRepository.Hash` از SHA-256 ساده روی ترکیب `salt:password` استفاده می‌کند. برای سامانه وب جدید، این روش نباید بدون بازطراحی امنیتی کپی شود. استفاده از PasswordHasher استاندارد ASP.NET Core Identity یا سازوکار امن معادل باید تصمیم‌گیری شود.
+These observations should be treated as findings to validate, not as desired web behavior. In particular, the observed order-creation flow and self-test disagreement must be resolved with the product owner before either behavior is adopted as a web requirement.
 
-### 5.3 رمز پیش‌فرض
-در `Db.SeedIfFirstRun` کاربر `admin` با رمز `123456` ایجاد می‌شود. این مقدار فقط یک مقدار پیش‌فرض توسعه/راه‌اندازی فعلی است و نباید به‌عنوان اعتبارنامه پیش‌فرض نسخه وب حفظ شود.
+## 6. Security and Operational Observations
 
-### 5.4 اختلاف دیتابیس Debug و Release
-دیتابیس Debug همراه آرشیو شامل Projects، ProjectCustomers، ProjectId، Phone2، Color، Brand، ProformaNumber و InvoiceNumber است. دیتابیس Release همراه آرشیو قدیمی‌تر است و این تغییرات را ندارد. بنابراین نمی‌توان هر دو فایل را نماینده یک Schema واحد و هم‌زمان دانست.
+The desktop source includes a default administrative account with a weak hard-coded password. The password storage implementation uses a single SHA-256 hash with salt. No role/permission model was identified in the inspected source.
 
-### 5.5 فایل Schema.sql
-فایل `Data/Schema.sql` در آرشیو شامل مجموعه‌ای از Queryهای عملیاتی است و DDL کامل `CREATE TABLE` برای ساخت دیتابیس خالی در آن دیده نمی‌شود؛ با این حال `Db.Initialize` همین Resource را به‌عنوان اسکریپت راه‌اندازی اجرا می‌کند. این موضوع یک ریسک جدی راه‌اندازی از دیتابیس خالی است و باید با اجرای واقعی برنامه و بررسی فایل تولیدشده/تاریخچه تغییرات روشن شود.
+These mechanisms must not be copied into a network-accessible web application. The web edition requires a deliberate authentication, password-hashing, authorization, secret-management, and audit strategy. The specific technologies and design are decisions for the target-system architecture phase.
 
-### 5.6 نبود مهاجرت نسخه‌بندی‌شده
-`Db.SchemaVersion` برابر 1 است و مقدار آن در Settings نوشته می‌شود؛ اما در کد بررسی‌شده، زنجیره Migrationهای نسخه‌به‌نسخه مشاهده نشد. تغییرات Schema باید برای نسخه وب با Migrationهای قابل تکرار و آزمون‌پذیر مدیریت شوند.
+The SQL console is a privileged diagnostic feature and must not be exposed in the web application without a separate security design and explicit authorization.
 
-### 5.7 SQL Console
-`DatabasePage` امکان اجرای SQL دلخواه را فراهم می‌کند. این قابلیت نباید به کاربران عادی نسخه وب ارائه شود. اگر در نسخه مدیریتی باقی بماند، باید محدود، ثبت‌شده و کنترل‌شده باشد.
+Because the query logger retains SQL and parameter values in memory, its treatment of potentially sensitive values should also be assessed before any equivalent logging capability is designed for the web edition.
 
-### 5.8 وضعیت مالی و وضعیت سفارش
-در کد `OrderRepository.Create`، سفارش جدید با وضعیت `InProduction` درج می‌شود؛ در حالی که Enum و سایر Queryها وضعیت `PendingPayment` را نیز دارند و UI صفحه سفارشات فیلتر `PendingPayment` را در نوار فیلتر نشان نمی‌دهد. جریان دقیق «ثبت سفارش بدون پیش‌پرداخت»، «در انتظار تأیید پرداخت» و «شروع تولید» نیازمند تصمیم محصول است.
+## 7. Known Limitations of This Analysis
 
-### 5.9 حذف سفارش و سابقه مالی
-حذف سفارش در Repository وجود دارد و جدول‌های اقلام، مراحل و پرداخت‌ها با `ON DELETE CASCADE` حذف می‌شوند. برای نسخه وب باید مشخص شود آیا حذف واقعی مجاز است یا باید لغو/بایگانی و Audit Trail جایگزین آن شود.
+- The analysis is based on the inspected source archive and the two database files included in it.
+- Database contents may be development or sample data; record counts and sample records are intentionally not treated as business requirements.
+- The two database files have schema drift.
+- The Debug database is more feature-complete among the inspected files, but has not been established as the canonical production schema.
+- The production database, actual deployment topology, user roles, and operational procedures have not yet been confirmed.
+- Some behaviors are inferred from inspected code paths and may require runtime verification.
+- No web implementation decisions are implied by this document.
 
-### 5.10 مالک سفارش پروژه‌ای
-مدل فعلی اجازه می‌دهد سفارش متعلق به پروژه باشد و CustomerId آن NULL باشد. بنابراین از روی ساختار داده فعلی نمی‌توان تعیین کرد که در سفارش پروژه‌ای، مشتری نهایی/طرف حساب/گیرنده فاکتور دقیقاً کدام عضو پروژه است. این تصمیم مهمی برای مدل وب و چاپ اسناد است.
+## 8. Recommended Use
 
-## 6. پیشنهاد جهت نسخه وب (پیشنهاد، نه رفتار موجود)
-
-- نسخه وب را از نظر معماری مستقل از WinForms بسازیم؛ فقط قواعد کسب‌وکار تأییدشده را منتقل کنیم.
-- قبل از انتخاب دیتابیس نهایی، محیط استقرار، تعداد کاربران هم‌زمان، شبکه و نیاز به دسترسی بیرونی مشخص شود.
-- منطق مالی و گردش سفارش از فرم‌های UI خارج و در Application/Domain پیاده‌سازی شود.
-- تمام تغییرات مالی و گردش تولید در تراکنش انجام شوند.
-- حذف و ویرایش عملیات حساس دارای مجوز، تأیید و Audit Log باشند.
-- طراحی فارسی/RTL، اعداد فارسی/لاتین، واحد پول، تاریخ شمسی و چاپ فاکتور به‌عنوان نیازهای محصول بررسی شوند.
-- برای مهاجرت داده از SQLite، یک برنامه Import و تطبیق داده طراحی شود؛ دیتابیس همراه آرشیو فعلاً به‌تنهایی منبع قطعی Schema جاری نیست.
+Use this document as the current-state baseline. Confirm business-critical behavior with the product owner, verify operational findings where necessary, and record target-system decisions separately. Do not treat the legacy implementation or either included database file as the automatic specification for the web edition.

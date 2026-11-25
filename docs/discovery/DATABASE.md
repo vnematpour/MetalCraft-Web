@@ -1,92 +1,120 @@
-# تحلیل پایگاه داده
+# Database Discovery
 
-## 1. تکنولوژی و اتصال
+## 1. Purpose and Scope
 
-- دیتابیس فعلی SQLite است.
-- Provider: `Microsoft.Data.Sqlite` نسخه `10.0.14`.
-- نام فایل: `MetalCraft.db`.
-- مسیر دیتابیس با متغیر محیطی `METALCRAFT_DB` قابل تعیین است؛ در غیر این صورت ابتدا پوشه Data کنار برنامه و در صورت عدم امکان نوشتن، LocalApplicationData بررسی می‌شود.
-- اتصال با `ForeignKeys=true` باز می‌شود.
+This document records database facts observed in the existing MetalCraft WinForms source archive and the two SQLite database files included in that archive. It does not select the database engine or schema design for the web edition.
 
-## 2. جداول و Viewهای مشاهده‌شده در دیتابیس Debug
+Observed legacy implementation details are evidence about the current desktop application, not automatic requirements for the target system.
 
-| شیء | نقش |
-|---|---|
-| Customers | اطلاعات مشتریان |
-| Projects | اطلاعات پروژه |
-| ProjectCustomers | رابطه چندبه‌چند پروژه و مشتری |
-| Orders | سفارش و مبالغ و وضعیت |
-| OrderItems | اقلام سفارش |
-| Stations | ایستگاه‌های تولید |
-| OrderStations | مراحل مسیر تولید سفارش |
-| Payments | پرداخت‌های سفارش |
-| Users | حساب‌های کاربری |
-| Settings | تنظیمات کلید/مقدار |
-| vw_OrderSummary | View خلاصه سفارش، مالک، مبلغ و مانده |
+## 2. Legacy Database Technology
 
-## 3. ایندکس‌های مشاهده‌شده در Debug
+- Database engine: SQLite
+- Data access package: `Microsoft.Data.Sqlite` 10.0.14
+- Database filename: `MetalCraft.db`
+- Default location: application base directory under `Data`
+- Optional override: `METALCRAFT_DB`
+- Fallback: Local Application Data when the default location is not writable
 
-- `IX_Customers_Name`
-- `IX_Customers_Phone`
-- `IX_OrderItems_Order`
-- `IX_OrderStations_Order`
-- `IX_OrderStations_Station`
-- `IX_Orders_Customer`
-- `IX_Orders_ProjectId`
-- `IX_Orders_Station`
-- `IX_Orders_Status`
-- `IX_Payments_Order`
-- `IX_ProjectCustomers_CustomerId`
-- `UX_Projects_Code` (Unique و فیلترشده برای Code غیرخالی)
+The desktop application is designed around a local database file. This deployment model and its concurrency characteristics must not be assumed suitable for multiple concurrent web users.
 
-## 4. Constraintهای مهم
+## 3. Database Files Inspected
 
-- کد مشتری Unique است.
-- نام کاربری Unique و بدون حساسیت به بزرگی/کوچکی حروف است.
-- OrderNumber یکتا است.
-- OrderType فقط `Production` یا `Service` است.
-- Status فقط چهار مقدار Enum را می‌پذیرد.
-- سفارش باید دقیقاً یک مالک از نوع Customer یا Project داشته باشد.
-- OrderItem.Quantity > 0 و UnitPrice >= 0.
-- Payment.Amount > 0.
-- حذف Order اقلام، مراحل و پرداخت‌ها را Cascade می‌کند.
-- حذف Customer/Project مورد ارجاع سفارش با RESTRICT محدود شده است.
-- حذف Station، ارجاع‌های مربوط را با SET NULL تغییر می‌دهد.
+| File | Approximate size | Integrity check |
+|---|---:|---|
+| Debug `MetalCraft.db` | 128 KiB | `ok` |
+| Release `MetalCraft.db` | 104 KiB | `ok` |
 
-## 5. اختلاف دیتابیس Debug و Release
+Both files reported `SchemaVersion = 1`, but their structures differed. Therefore, the schema-version value alone does not reliably identify the actual schema represented by these two database files.
 
-این مهم‌ترین نکته دیتابیسی آرشیو است:
+The Debug database included structures absent from Release, including:
 
-| ویژگی | Debug | Release |
-|---|---|---|
-| Projects | دارد | ندارد |
-| ProjectCustomers | دارد | ندارد |
-| Orders.ProjectId | دارد | ندارد |
-| Customer.Phone2 | دارد | ندارد |
-| OrderItems.Color و Brand | دارد | ندارد |
-| Orders.ProformaNumber و InvoiceNumber | دارد | ندارد |
-| شاخص ProjectId و ارتباط ProjectCustomers | دارد | ندارد |
-| View با LEFT JOIN برای مشتری یا پروژه | دارد | View قدیمی و Customer-only |
+- `Projects`
+- `ProjectCustomers`
+- `Orders.ProjectId`
+- `Customers.Phone2`
+- `OrderItems.Color`
+- `OrderItems.Brand`
+- `Orders.ProformaNumber`
+- `Orders.InvoiceNumber`
 
-بنابراین دیتابیس Release داخل آرشیو با سورس فعلی هم‌نسخه نیست. برای انتقال داده باید ابتدا نسخه مرجع Schema مشخص شود.
+The Debug database is more feature-complete among the inspected files, but it has not been proven to be the canonical production schema. Do not treat either file as the authoritative source for a migration until the product owner confirms which database represents the intended business data and the canonical schema has been established.
 
-## 6. مسئله فایل Schema.sql
+The successful SQLite integrity checks establish file-level database integrity at the time of inspection. They do not prove that the application schema is complete, that business rules are satisfied, or that the data is suitable for production use.
 
-فایل `Data/Schema.sql` در آرشیو شامل Queryهای عملیاتی است؛ مانند SELECT/INSERT/UPDATE برای مشتری، سفارش، پرداخت و داشبورد. در آن اسکریپت DDL کامل ایجاد جدول‌ها و Viewها مشاهده نشد.
+## 4. Observed Data Model Areas
 
-با این وجود `Db.Initialize()`، محتوای همین Resource را با `Execute` اجرا می‌کند. از روی سورس فعلی، ایجاد دیتابیس کاملاً خالی قابل اتکا نیست و باید به‌صورت عملی بررسی شود. ممکن است فایل DB آماده، بخشی از فرآیند نصب فعلی باشد یا فایل SQL به اشتباه جایگزین شده باشد؛ این موضوع هنوز قطعی نیست.
+The legacy database contains or references the following areas:
 
-## 7. نسخه‌بندی Schema
+- Customers
+- Projects
+- Project/customer membership
+- Orders
+- Order items
+- Stations
+- Order stations/routes
+- Users
+- Payment-related information
 
-`Db.SchemaVersion` مقدار 1 دارد و مقدار آن در Settings ذخیره می‌شود. در سورس بررسی‌شده Migrationهای صریح از نسخه N به N+1 دیده نشد.
+The exact target schema, field nullability, indexes, constraints, and migration sequence must be designed and verified separately.
 
-برای نسخه وب:
-- Migrationها باید در Repository کنترل نسخه ثبت شوند.
-- نصب روی دیتابیس خالی باید تست شود.
-- ارتقا از نسخه قبلی باید تست شود.
-- مهاجرت از SQLite باید جدا از Migrationهای دیتابیس مقصد طراحی شود.
-- قبل از هر Migration مخرب، Backup و امکان Rollback/Recovery مشخص شود.
+## 5. Constraints and Integrity Findings
 
-## 8. پیشنهاد فنی
+- The inspected Debug schema enforces exclusive order ownership through a check constraint requiring either customer or project ownership, but not both.
+- No database-level guarantee for at most one active order per project was found.
+- Both inspected databases passed `PRAGMA integrity_check`.
+- No foreign-key check issues were reported in the inspected databases.
 
-انتخاب دیتابیس مقصد را تا تعیین محیط استقرار و تعداد کاربران هم‌زمان قطعی نکنیم. اگر نسخه وب قرار است چندکاربره و روی سرور LAN اجرا شود، دیتابیس Server-based معمولاً گزینه مناسب‌تری از اشتراک مستقیم فایل SQLite است؛ اما تصمیم نهایی باید با نیاز عملیاتی و محیط نصب گرفته شود.
+The foreign-key check result does not, by itself, establish whether foreign-key enforcement is enabled on every application database connection at runtime. That behavior requires separate verification.
+
+The exclusive order-ownership invariant is a confirmed business rule and should be protected in the web edition. The active-order constraint requires an approved definition of active statuses before implementation.
+
+## 6. Initialization, Schema Versioning, and Migration Risks
+
+The inspected source defines `SchemaVersion = 1`. No ordered migration mechanism was identified in the inspected source.
+
+The inspected `Schema.sql` appeared to contain operational SQL/query fragments rather than a complete set of `CREATE TABLE`, `CREATE INDEX`, and `CREATE VIEW` definitions. The database initialization code executes the embedded SQL text.
+
+The build script publishes the application but does not clearly establish a complete database packaging and migration workflow.
+
+The restore-validation path also requires further verification. The inspected validation did not establish that all structures needed by the more feature-complete Debug schema, including `Projects` and `ProjectCustomers`, are mandatory in a restored database.
+
+Before relying on the legacy database for migration or production, verify:
+
+- Which database and schema are canonical.
+- The source of truth for schema definitions.
+- How a clean database is created.
+- Whether schema upgrades are ordered, repeatable, and safe.
+- The upgrade path from every supported existing schema.
+- Whether restore validation rejects databases missing required tables, columns, indexes, or constraints.
+- Backup and restore consistency, including backups taken during application activity.
+- Whether foreign-key enforcement is enabled for every connection.
+- Transaction boundaries for multi-step writes.
+- Concurrent-write behavior and handling of SQLite lock/contention errors.
+
+The above are verification requirements, not a recommendation to retain SQLite in the web edition.
+
+## 7. Legacy Data Access Characteristics
+
+- Static repository classes.
+- Direct SQL through `Microsoft.Data.Sqlite`.
+- No Entity Framework Core identified.
+- No generic Unit of Work identified.
+- A query logger retains SQL and parameter values in memory.
+
+These are legacy implementation choices, not requirements for the web edition.
+
+## 8. Security and Privacy Considerations
+
+The legacy SQL console is a privileged diagnostic feature and must not be exposed to ordinary web users.
+
+SQL and parameter logging may capture sensitive business or personal data. The web edition needs explicit decisions for log redaction, retention, access control, and operational diagnostics.
+
+The legacy password hashing approach (single SHA-256 with salt) is not suitable as a design to copy into the web edition. A modern adaptive password-hashing mechanism should be selected as part of a separately approved authentication design.
+
+## 9. Web Database Decision
+
+**Status: Open**
+
+The web edition database engine, hosting model, backup strategy, migration tool, and data access approach have not been selected in the confirmed project decisions available at this stage.
+
+Do not assume SQLite, SQL Server, PostgreSQL, EF Core, or any other technology until the System Architect evaluates the requirements and records an approved decision.
