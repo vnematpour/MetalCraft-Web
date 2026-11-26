@@ -12,17 +12,17 @@ This backlog records questions and their current status. It does not itself appr
 
 | ID | Question | Why it matters | Status |
 |---|---|---|---|
-| OQ-001 | Can a project receive a new order after its previous order is `Completed`? | Defines project order lifecycle and recurrence rules | Open |
-| OQ-002 | Which exact order statuses count as active for the intended limit of at most one active order per project? | Required to define and enforce the project-order constraint | Open |
-| OQ-003 | Can a project have an order in a payment-pending, paused, draft, or other non-production state while another order is created? | Clarifies how the active-order rule applies across lifecycle states | Open |
-| OQ-004 | Can customers be added to or removed from a project after orders have been created? | Affects membership history, existing orders, and access to project work | Open |
-| OQ-005 | Can one customer belong to multiple projects at the same time? | Affects membership constraints and workflows | Open |
-| OQ-006 | What happens to a project when all member customers are removed? | Defines project lifecycle and whether an empty project can remain usable | Open |
-| OQ-007 | Can customers or projects be deleted, or should they only be archived/deactivated? | Affects referential integrity, historical records, and auditability | Open |
+| OQ-001 | Can a project receive a new order after its previous order is `Completed`? | Defines project order lifecycle and recurrence rules | Approved |
+| OQ-002 | Which exact order statuses count as active for the intended limit of at most one active order per project? | Required to define and enforce the project-order constraint | Approved |
+| OQ-003 | Can a project have an order in a payment-pending, paused, draft, or other non-production state while another order is created? | Clarifies how the active-order rule applies across lifecycle states | Approved |
+| OQ-004 | Can customers be added to or removed from a project after orders have been created? | Affects membership history, existing orders, and access to project work | Approved |
+| OQ-005 | Can one customer belong to multiple projects at the same time? | Affects membership constraints and workflows | Approved |
+| OQ-006 | What happens to a project when all member customers are removed? | Defines project lifecycle and whether an empty project can remain usable | Partially answered — residual decision open |
+| OQ-007 | Can customers or projects be deleted, or should they only be archived/deactivated? | Affects referential integrity, historical records, and auditability | Partially answered — residual decision open |
 | OQ-008 | What are the complete order types, and how do their workflows differ? | Affects order behavior, validation, and UI | Open |
-| OQ-009 | What are the valid order status transitions, including who or what may trigger each transition? | Required for reliable lifecycle implementation and authorization | Open |
-| OQ-010 | What exactly happens when an order is cancelled? | May affect payments, production, materials, inventory, and documents | Open |
-| OQ-011 | Can an order be reopened after completion or cancellation? If so, under what conditions? | Affects lifecycle rules and audit history | Open |
+| OQ-009 | What are the valid order status transitions, including who or what may trigger each transition? | Required for reliable lifecycle implementation and authorization | Partially answered — residual decision open |
+| OQ-010 | What exactly happens when an order is cancelled? | May affect payments, production, materials, inventory, and documents | Partially answered — residual decision open |
+| OQ-011 | Can an order be reopened after completion or cancellation? If so, under what conditions? | Affects lifecycle rules and audit history | Partially answered — residual decision open |
 | OQ-045 | Can a project-owned order be created when the project has no member customers? | Defines project-order eligibility and validation | Open |
 | OQ-046 | When project membership changes, should existing project orders retain a historical snapshot of the participating customers, or reflect the current membership? | Determines how historical project work and documents are interpreted | Open |
 
@@ -55,9 +55,9 @@ This backlog records questions and their current status. It does not itself appr
 
 | ID | Question | Why it matters | Status |
 |---|---|---|---|
-| OQ-026 | What user roles are required? | No clear legacy role/permission model was identified | Open |
-| OQ-027 | Which actions require fine-grained permissions, and at what level should access be restricted? | Defines authorization boundaries | Open |
-| OQ-028 | Is an audit trail required for changes to customers, projects, orders, payments, and production? Which events and details must be retained? | Affects traceability, accountability, and storage requirements | Open |
+| OQ-026 | What user roles are required? | No clear legacy role/permission model was identified | Partially answered — residual decision open |
+| OQ-027 | Which actions require fine-grained permissions, and at what level should access be restricted? | Defines authorization boundaries | Partially answered — residual decision open |
+| OQ-028 | Is an audit trail required for changes to customers, projects, orders, payments, and production? Which events and details must be retained? | Affects traceability, accountability, and storage requirements | Partially answered — residual decision open |
 | OQ-029 | Are users internal to one organization, or is multi-tenancy required? | Affects security and data isolation | Open |
 | OQ-030 | Are password reset, account lockout, session expiry, and multi-factor authentication (MFA) required? | Defines authentication and account-security requirements | Open |
 
@@ -124,5 +124,6 @@ Use these statuses consistently:
 - **Approved** — the decision has been accepted by the Product Owner and recorded in `DECISION_LOG.md`.
 - **Deferred** — the decision is intentionally postponed; include the reason and the condition or milestone for revisiting it.
 - **Out of Scope** — the Product Owner has explicitly excluded the capability or question from the web edition.
+- **Partially answered — residual decision open** — one or more aspects have been decided, but a material part of the original question remains unresolved. The unresolved part must remain explicit.
 
 Do not change a question's status based only on an AI recommendation, developer assumption, or legacy implementation detail. Preserve question IDs when editing existing entries. Assign new IDs only to genuinely new questions, and update related documents when a decision changes their content.
